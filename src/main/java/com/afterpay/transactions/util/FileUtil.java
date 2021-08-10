@@ -1,5 +1,7 @@
 package com.afterpay.transactions.util;
 
+import org.apache.log4j.Logger;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -14,6 +16,7 @@ import java.util.List;
  * This class is helper utility for file reading
  */
 public class FileUtil {
+    private static final Logger LOGGER = Logger.getLogger(FileUtil.class);
 
     /**
      * This methods will read file and return transactions rows as list
@@ -23,7 +26,7 @@ public class FileUtil {
         try {
             lines = Files.readAllLines(Paths.get(inputPath), StandardCharsets.UTF_8);
         } catch (IOException e) {
-            System.err.println("error while reading lines from file " + e);
+            LOGGER.error("error while reading lines from file " + e);
         }
 
         return lines;

@@ -1,7 +1,7 @@
-import com.opencsv.CSVWriter;
+package com.afterpay.transactions.util;
 
-import java.io.FileWriter;
-import java.io.IOException;
+import org.apache.log4j.Logger;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -16,36 +16,41 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class TestDataGenerator {
 
+    private static final Logger LOGGER = Logger.getLogger(TestDataGenerator.class);
+
     /**
      * Generates test 100 records for 20 unique credit cards.
      * Copy the output and save as a file to use as program input
+     *
      * @param args - command line args
      */
-    public static void main(String[] args) throws IOException {
-        CSVWriter writer = new CSVWriter(new FileWriter("transactions"));
+    public static void main(String[] args) {
+        int totalCreditCards = 15;
+        int totalTransactions = 100;
+        List<String> transactions = generateTransactions(totalCreditCards, totalTransactions);
+        transactions.forEach(LOGGER::info);
+    }
 
-        int totalCreditCards = 2000;
-        int totalTransctions = 200;
+    public static List<String> generateTransactions(int totalCreditCards, int totalTransactions) {
         List<String> ccNumbers = new ArrayList<>();
+        List<String> transactions = new ArrayList<>();
         for (int i = 0; i < totalCreditCards; i++) {
             ccNumbers.add(UUID.randomUUID().toString().replaceAll("-", ""));
         }
         LocalDateTime startDate = LocalDateTime.parse("2021-08-01T00:00:00", DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        for (int i = 0; i < totalTransctions; i++) {
+        for (int i = 0; i < totalTransactions; i++) {
             String ccNumber = ccNumbers.get(new Random().nextInt(totalCreditCards));
             startDate = nextRandomChronologicalDate(startDate);
             BigDecimal amount = BigDecimal.valueOf(
                     ThreadLocalRandom.current().nextDouble(5, 130))
                     .setScale(2, BigDecimal.ROUND_HALF_DOWN);
-            String[] item = {ccNumber, String.valueOf(startDate), String.valueOf(amount)};
-            writer.writeNext(item, false);
+            transactions.add(ccNumber + "," + startDate + "," + amount);
         }
 
-        writer.close();
+        return transactions;
     }
 
     /**
-     *
      * @param previousDate - Previous date to maintain chronological order
      * @return new random date in future
      */

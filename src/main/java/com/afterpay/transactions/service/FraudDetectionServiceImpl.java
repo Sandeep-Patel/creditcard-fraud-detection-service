@@ -1,13 +1,17 @@
 package com.afterpay.transactions.service;
 
-import com.afterpay.transactions.model.Transaction;
 import com.afterpay.transactions.model.CreditCardTransactions;
+import com.afterpay.transactions.model.Transaction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author Sandeep
@@ -16,6 +20,7 @@ import java.util.Map;
  */
 public class FraudDetectionServiceImpl implements FraudDetectionService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(FraudDetectionServiceImpl.class);
     private final BigDecimal threshold;
 
     public FraudDetectionServiceImpl(BigDecimal threshold) {
@@ -26,24 +31,35 @@ public class FraudDetectionServiceImpl implements FraudDetectionService {
      * This methods will read & parse given file
      */
     @Override
-    public void processTransactions(List<String> transactions) throws DateTimeParseException, NumberFormatException {
+    public List<String> processTransactions(List<String> transactions) throws DateTimeParseException, NumberFormatException {
 
         Map<String, CreditCardTransactions> transactionMap = new HashMap<>();
+        List<String> fraudCreditCards = new ArrayList<>();
 
         // For each line, parse the transaction and insert it into the map of <creditCard, list of transactions> in
         // such a way that at any time transaction list is not violating the threshold and 24 hours time window
+        AtomicLong lineNumber = new AtomicLong(1);
         transactions.forEach(transaction -> {
-            Transaction cardTransaction = new Transaction(transaction);
+            try {
+                Transaction cardTransaction = new Transaction(transaction);
 
-            CreditCardTransactions creditCardTransactions =
-                    transactionMap.getOrDefault(cardTransaction.getCreditCardHash(), new CreditCardTransactions());
+                CreditCardTransactions creditCardTransactions =
+                        transactionMap.getOrDefault(cardTransaction.getCreditCardHash(), new CreditCardTransactions(threshold));
 
-            boolean isFraud = checkTransactionsForCard(creditCardTransactions, cardTransaction);
-            if (isFraud) {
-                emitFraudEvent(cardTransaction.getCreditCardHash());
+                boolean isFraud = checkTransactionsForCard(creditCardTransactions, cardTransaction);
+                if (isFraud) {
+                    fraudCreditCards.add(cardTransaction.getCreditCardHash());
+                    emitFraudEvent(cardTransaction.getCreditCardHash());
+                }
+                transactionMap.put(cardTransaction.getCreditCardHash(), creditCardTransactions);
+                lineNumber.getAndIncrement();
+            } catch (DateTimeParseException | NumberFormatException e) {
+                //Log invalid and continue with other lines instead of halting the whole process
+                LOGGER.error("Invalid transaction format at line number: " + lineNumber);
             }
-            transactionMap.put(cardTransaction.getCreditCardHash(), creditCardTransactions);
         });
+
+        return fraudCreditCards;
     }
 
     private boolean checkTransactionsForCard(CreditCardTransactions creditCardTransactions, Transaction transaction) {
@@ -52,7 +68,7 @@ public class FraudDetectionServiceImpl implements FraudDetectionService {
             return true;
         }
         // Implement variable length Sliding window
-        creditCardTransactions.slideWindow(transaction, threshold);
+        creditCardTransactions.slideWindow(transaction);
 
         return creditCardTransactions.isFraud();
     }
@@ -64,7 +80,7 @@ public class FraudDetectionServiceImpl implements FraudDetectionService {
      */
     @Override
     public void emitFraudEvent(String hashCardNumber) {
-        //TODO: emit event
+        //TODO: Event emitter can be implemented here, sor simplicity just printing here.
     }
 
 }

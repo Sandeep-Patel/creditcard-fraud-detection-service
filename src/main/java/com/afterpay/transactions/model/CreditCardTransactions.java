@@ -1,6 +1,8 @@
 
 package com.afterpay.transactions.model;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -20,7 +22,12 @@ public class CreditCardTransactions {
 
     private BigDecimal dailyTotal = BigDecimal.ZERO;
     private boolean fraud;
+    private final BigDecimal threshold;
     private final List<Transaction> transactions = new ArrayList<>();
+
+    public CreditCardTransactions(BigDecimal threshold) {
+        this.threshold = threshold;
+    }
 
     public boolean isFraud() {
         return fraud;
@@ -42,33 +49,37 @@ public class CreditCardTransactions {
      *
      * @param transaction - current transaction
      */
-    public void slideWindow(Transaction transaction, BigDecimal threshold) {
+    public void slideWindow(Transaction transaction) {
 
         // slide window to right until new transaction fits in 24 hours window
-        while (!transactions.isEmpty() && getTimeDiffInHours(transactions.get(0), transaction) > TIME_WINDOW) {
+        while (!transactions.isEmpty() && getTimeDiffInMins(transactions.get(0), transaction) > TIME_WINDOW) {
             removeFirstTransaction();
         }
         addTransaction(transaction);
 
         if (isBreachesThreshold(threshold)) {
-            System.out.println("Fraud Creditcard alert!!! " + transaction.getCreditCardHash());
             markCardAsFraud();
         }
     }
 
-    private long getTimeDiffInHours(Transaction firstTransaction, Transaction lastTransaction) {
+    long getTimeDiffInMins(Transaction firstTransaction, Transaction lastTransaction) {
         LocalDateTime fromDateTime = lastTransaction.getTimestamp();
         LocalDateTime toDateTime = firstTransaction.getTimestamp();
         return LocalDateTime.from(toDateTime).until(fromDateTime, ChronoUnit.MINUTES);
     }
 
-    public void addTransaction(Transaction transaction) {
+    private void addTransaction(Transaction transaction) {
         transactions.add(transaction);
         dailyTotal = dailyTotal.add(transaction.getTransactionAmount());
     }
 
-    public void removeFirstTransaction() {
+    private void removeFirstTransaction() {
         dailyTotal = dailyTotal.subtract(transactions.get(0).getTransactionAmount());
         transactions.remove(0);
+    }
+
+    @VisibleForTesting
+    List<Transaction> getTransactions() {
+        return transactions;
     }
 }

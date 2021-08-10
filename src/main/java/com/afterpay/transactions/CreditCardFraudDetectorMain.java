@@ -1,39 +1,34 @@
 package com.afterpay.transactions;
 
-import com.afterpay.transactions.util.FileUtil;
+import com.afterpay.transactions.exception.InvalidUsageException;
 import com.afterpay.transactions.service.FraudDetectionService;
 import com.afterpay.transactions.service.FraudDetectionServiceImpl;
+import com.afterpay.transactions.util.FileUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 
 /**
- *
  * @author Sandeep
  */
 public class CreditCardFraudDetectorMain {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CreditCardFraudDetectorMain.class);
 
     public static void main(String[] args) {
-        if(args.length != 2) {
-            System.err.println("Invalid input");
-            System.err.println("Usage:> java -jar <jar_name>.jar <filePath> <threshold>");
-            System.exit(1);
+        if (args.length != 2) {
+            throw new InvalidUsageException("Invalid usage: \nUsage:> java -jar <jar_name>.jar <filePath> <threshold>");
         } else {
-            try {
-                BigDecimal threshold =  new BigDecimal(args[1]);
-                FraudDetectionService fraudDetectionService = new FraudDetectionServiceImpl(threshold);
+            BigDecimal threshold = new BigDecimal(args[1]);
+            FraudDetectionService fraudDetectionService = new FraudDetectionServiceImpl(threshold);
 
-                List<String> transactions = FileUtil.readTransactionsFile(args[0]);
-                fraudDetectionService.processTransactions(transactions);
-            } catch (DateTimeParseException e) {
-                System.err.println("Incorrect datetime format in the sample file");
-                System.exit(1);
-            } catch (NumberFormatException e) {
-                System.err.println("Threshold amount is in incorrect format in the sample file");
-                System.exit(1);
-            }
+            List<String> transactions = FileUtil.readTransactionsFile(args[0]);
+            List<String> fraudCreditCards = fraudDetectionService.processTransactions(transactions);
+
+            LOGGER.error("Potential fraud credit card list:");
+            fraudCreditCards.forEach(LOGGER::error);
         }
     }
-    
+
 }

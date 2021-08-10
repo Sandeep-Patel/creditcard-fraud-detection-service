@@ -11,7 +11,7 @@ import java.util.List;
  */
 public interface FraudDetectionService {
 
-    void processTransactions(List<String> transactions) throws DateTimeParseException, NumberFormatException;
+    List<String> processTransactions(List<String> transactions) throws DateTimeParseException, NumberFormatException;
 
     void emitFraudEvent(String hashCardNumber);
 
