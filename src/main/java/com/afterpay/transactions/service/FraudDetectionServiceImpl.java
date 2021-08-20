@@ -28,10 +28,10 @@ public class FraudDetectionServiceImpl implements FraudDetectionService {
     }
 
     /**
-     * This methods will read & parse given file
+     * This method will process list of transactions
      */
     @Override
-    public List<String> processTransactions(List<String> transactions) throws DateTimeParseException, NumberFormatException {
+    public List<String> processTransactions(final List<String> transactions) throws DateTimeParseException, NumberFormatException {
 
         Map<String, CreditCardTransactions> transactionMap = new HashMap<>();
         List<String> fraudCreditCards = new ArrayList<>();
