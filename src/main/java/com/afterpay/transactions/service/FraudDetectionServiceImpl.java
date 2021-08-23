@@ -7,10 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -31,32 +28,23 @@ public class FraudDetectionServiceImpl implements FraudDetectionService {
      * This method will process list of transactions
      */
     @Override
-    public List<String> processTransactions(final List<String> transactions) throws DateTimeParseException, NumberFormatException {
+    public Set<String> processTransactions(final List<Transaction> transactions) {
 
         Map<String, CreditCardTransactions> transactionMap = new HashMap<>();
-        List<String> fraudCreditCards = new ArrayList<>();
+        Set<String> fraudCreditCards = new HashSet<>();
 
-        // For each line, parse the transaction and insert it into the map of <creditCard, list of transactions> in
+        // For each transaction, insert it into the map of <creditCard, list of transactions> in
         // such a way that at any time transaction list is not violating the threshold and 24 hours time window
-        AtomicLong lineNumber = new AtomicLong(1);
         transactions.forEach(transaction -> {
-            try {
-                Transaction cardTransaction = new Transaction(transaction);
+            CreditCardTransactions creditCardTransactions =
+                    transactionMap.getOrDefault(transaction.getCreditCardHash(), new CreditCardTransactions(threshold));
 
-                CreditCardTransactions creditCardTransactions =
-                        transactionMap.getOrDefault(cardTransaction.getCreditCardHash(), new CreditCardTransactions(threshold));
-
-                boolean isFraud = checkTransactionsForCard(creditCardTransactions, cardTransaction);
-                if (isFraud) {
-                    fraudCreditCards.add(cardTransaction.getCreditCardHash());
-                    emitFraudEvent(cardTransaction.getCreditCardHash());
-                }
-                transactionMap.put(cardTransaction.getCreditCardHash(), creditCardTransactions);
-                lineNumber.getAndIncrement();
-            } catch (DateTimeParseException | NumberFormatException e) {
-                //Log invalid and continue with other lines instead of halting the whole process
-                LOGGER.error("Invalid transaction format at line number: " + lineNumber);
+            boolean isFraud = checkTransactionsForCard(creditCardTransactions, transaction);
+            if (isFraud) {
+                fraudCreditCards.add(transaction.getCreditCardHash());
+                emitFraudEvent(transaction.getCreditCardHash());
             }
+            transactionMap.put(transaction.getCreditCardHash(), creditCardTransactions);
         });
 
         return fraudCreditCards;

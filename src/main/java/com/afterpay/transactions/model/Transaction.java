@@ -22,17 +22,6 @@ public class Transaction {
         this.transactionAmount = transactionAmount;
     }
 
-    public Transaction(String line) {
-        String[] transaction = line.replaceAll("\\s+", "").split(",");
-        String cardNumber = transaction[0];
-        LocalDateTime transactionDate = LocalDateTime.parse(transaction[1], DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        BigDecimal amount = new BigDecimal(transaction[2]);
-
-        this.creditCardHash = cardNumber;
-        this.timestamp = transactionDate;
-        this.transactionAmount = amount;
-    }
-
     public String getCreditCardHash() {
         return creditCardHash;
     }

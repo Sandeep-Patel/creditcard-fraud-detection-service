@@ -1,6 +1,7 @@
 package com.afterpay.transactions;
 
 import com.afterpay.transactions.exception.InvalidUsageException;
+import com.afterpay.transactions.model.Transaction;
 import com.afterpay.transactions.service.FraudDetectionService;
 import com.afterpay.transactions.service.FraudDetectionServiceImpl;
 import com.afterpay.transactions.util.FileUtil;
@@ -9,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author Sandeep
@@ -23,8 +25,8 @@ public class CreditCardFraudDetectorMain {
             BigDecimal threshold = new BigDecimal(args[1]);
             FraudDetectionService fraudDetectionService = new FraudDetectionServiceImpl(threshold);
 
-            List<String> transactions = FileUtil.readTransactionsFile(args[0]);
-            List<String> fraudCreditCards = fraudDetectionService.processTransactions(transactions);
+            List<Transaction> transactions = FileUtil.readTransactionsFile(args[0]);
+            Set<String> fraudCreditCards = fraudDetectionService.processTransactions(transactions);
 
             LOGGER.error("Potential fraud credit card list:");
             fraudCreditCards.forEach(LOGGER::error);
